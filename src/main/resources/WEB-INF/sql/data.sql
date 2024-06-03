@@ -1,0 +1,1 @@
+INSERT INTO RDBMS_DATA (name, count) values ("key", 0);
