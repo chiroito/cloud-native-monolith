@@ -1,0 +1,25 @@
+# Use EAP 8 Builder image to create a JBoss EAP 8 server
+# https://github.com/jboss-container-images/jboss-eap-8-openshift-image
+FROM registry.redhat.io/jboss-eap-8/eap8-openjdk17-builder-openshift-rhel8:latest AS builder
+
+# Set up environment variables for provisioning.
+ENV POSTGRESQL_DRIVER_VERSION 42.7.3
+ENV MAVEN_REPO /home/jboss/.m2/repository
+USER root
+RUN --mount=type=cache,id=myCache,target=/home/jboss/.m2 mkdir -p ${MAVEN_REPO}; chown jboss:root ${MAVEN_REPO}
+
+USER jboss
+# Build application and JBoss EAP
+COPY --chown=jboss:root . .
+RUN --mount=type=cache,id=myCache,target=/home/jboss/.m2 mvn package -Popenshift
+
+# Copy the JBoss EAP 8 server from the builder image to the runtime image.
+FROM registry.redhat.io/jboss-eap-8/eap8-openjdk17-runtime-openshift-rhel8:latest AS runtime
+
+# Set appropriate ownership and permissions.
+COPY --from=builder --chown=jboss:root /home/jboss/target/server $JBOSS_HOME
+# COPY --from=builder --chown=jboss:root /home/jboss/target/jakarta-sample-1.0-SNAPSHOT.war $JBOSS_HOME/standalone/deployments/ROOT.war
+# RUN touch $JBOSS_HOME/standalone/deployments/ROOT.war.dodeploy
+
+# Ensure appropriate permissions for the copied files.
+RUN chmod -R ug+rwX $JBOSS_HOME

@@ -1,0 +1,3 @@
+<distributable-web xmlns="urn:jboss:distributable-web:1.0">
+    <session-management name="mySession"/>
+</distributable-web>

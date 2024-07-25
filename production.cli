@@ -1,0 +1,18 @@
+# Session Store
+batch
+/socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding=infinispan-server:add(host=sessionstore, port=11222)
+run-batch
+
+batch
+/subsystem=infinispan/remote-cache-container=web:add(default-remote-cluster=myCluster)
+/subsystem=infinispan/remote-cache-container=web/remote-cluster=myCluster:add(socket-bindings=[infinispan-server])
+run-batch
+
+/subsystem=infinispan/remote-cache-container=web:write-attribute(name=properties,value={infinispan.client.hotrod.auth_username=web-session-user,infinispan.client.hotrod.auth_password=password})
+/subsystem=infinispan/remote-cache-container=web:write-attribute(name=modules,value=[org.wildfly.clustering.web.hotrod])
+/subsystem=infinispan/remote-cache-container=web:write-attribute(name=marshaller,value=PROTOSTREAM)
+
+/subsystem=distributable-web/hotrod-session-management=mySession:add(remote-cache-container=web, cache-configuration=org.infinispan.DIST_SYNC, granularity=ATTRIBUTE, marshaller=PROTOSTREAM)
+/subsystem=distributable-web/hotrod-session-management=mySession/affinity=none:add()
+/subsystem=distributable-web:write-attribute(name=default-session-management,value=mySession)
+

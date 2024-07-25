@@ -1,20 +1,20 @@
 <persistence>
-    <persistence-unit name="my-persistence">
+    <persistence-unit name="myapp">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-        <jta-data-source>java:jboss/datasources/PostgreSQLDS</jta-data-source>
+        <jta-data-source>java:jboss/datasources/myDatasource</jta-data-source>
         <properties>
-            <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
+            <property name="jakarta.persistence.schema-generation.database.action" value="create"/>
             <property name="jakarta.persistence.schema-generation.create-source" value="metadata"/>
             <property name="jakarta.persistence.sql-load-script-source" value="META-INF/sql/data.sql" />
-<!--            <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>-->
+            <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
 <!--            <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5432/user?currentSchema=public"/>-->
 <!--            <property name="hibernate.connection.username" value="user"/>-->
 <!--            <property name="hibernate.connection.password" value="pw"/>-->
 <!--            <property name="hibernate.connection.pool_size" value="1"/>-->
-<!--            <property name="hibernate.show_sql" value="true"/>-->
-<!--            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>-->
-<!--            <property name="hibernate.hbm2ddl.auto" value="create-drop"/>-->
-<!--            <property name="hibernate.hbm2ddl.import_files" value="data.sql"/>-->
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
+            <property name="hibernate.hbm2ddl.auto" value="create-drop"/>
+            <property name="hibernate.hbm2ddl.import_files" value="data.sql"/>
         </properties>
     </persistence-unit>
 </persistence>

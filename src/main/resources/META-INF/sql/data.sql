@@ -1,0 +1,1 @@
+INSERT INTO count_data (name, count, last_visit) values ('key', 0, null);

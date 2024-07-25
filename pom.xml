@@ -12,40 +12,169 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.target>11</maven.compiler.target>
-        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
         <junit.version>5.10.0</junit.version>
+        <version.bom>8.0.2.GA-redhat-00008</version.bom>
+        <version.bom.ee>8.0.2.GA-redhat-00008</version.bom.ee>
+        <version.plugin.wildfly>5.0.0.Final</version.plugin.wildfly>
+        <version.plugin.war>3.4.0</version.plugin.war>
+        <jboss.cli.script>dev.cli</jboss.cli.script>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>openshift</id>
+            <properties>
+                <jboss.cli.script>production.cli</jboss.cli.script>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jboss.eap.plugins</groupId>
+                        <artifactId>eap-maven-plugin</artifactId>
+                        <version>1.0.1.Final-redhat-00003</version>
+                        <configuration>
+                            <channels>
+                                <channel>
+                                    <manifest>
+                                        <groupId>org.jboss.eap.channels</groupId>
+                                        <artifactId>eap-8.0</artifactId>
+                                    </manifest>
+                                </channel>
+                            </channels>
+                            <feature-packs>
+                                <feature-pack>
+                                    <location>org.jboss.eap:wildfly-ee-galleon-pack</location>
+                                </feature-pack>
+                                <feature-pack>
+                                    <location>org.jboss.eap.cloud:eap-cloud-galleon-pack</location>
+                                </feature-pack>
+                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
+                                <feature-pack>
+                                    <location>org.jboss.eap:eap-datasources-galleon-pack</location>
+                                </feature-pack>
+                            </feature-packs>
+                            <layers>
+                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/assembly_capability-trimming-in-jboss-eap-for-openshift_default#base-layers_assembly_capability-trimming-in-jboss-eap-for-openshift -->
+                                <layer>jaxrs-server</layer>
+                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
+                                <layer>postgresql-datasource</layer>
+                                <!-- 環境変数に追加 POSTGRESQL_DRIVER_VERSION=42.7.3 -->
+                                <layer>web-clustering</layer>
+                            </layers>
+                            <!-- https://github.com/jbossas/eap-maven-plugin/blob/main/doc/package.md#fine-tune-server-configuration-and-package-extra-content -->
+                            <packaging-scripts>
+                                <packaging-script>
+                                    <scripts>
+                                        <script>${jboss.cli.script}</script>
+                                    </scripts>
+                                </packaging-script>
+                            </packaging-scripts>
+                            <runtime-name>ROOT.war</runtime-name>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>develop</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <jboss.cli.script>production.cli</jboss.cli.script>
+                <wildfly.provisioning.layers>jaxrs-server,postgresql-datasource</wildfly.provisioning.layers>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>${version.plugin.war}</version>
+                        <configuration>
+                            <warSourceExcludes>WEB-INF/distributable-web.xml</warSourceExcludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+
+        </profile>
+        <profile>
+            <id>solution</id>
+            <properties>
+                <project.build.sourceDirectory>src/solution/java</project.build.sourceDirectory>
+                <wildfly.provisioning.layers>jaxrs-server,postgresql-datasource,web-clustering</wildfly.provisioning.layers>
+                <jboss.cli.script>production.cli</jboss.cli.script>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
-            <!-- importing the microprofile BOM adds MicroProfile specs -->
             <dependency>
-                <groupId>org.wildfly.bom</groupId>
-                <artifactId>wildfly-microprofile</artifactId>
-                <version>23.0.2.Final</version>
+                <groupId>org.jboss.bom</groupId>
+                <artifactId>jboss-eap-ee</artifactId>
+                <version>${version.bom}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.bom</groupId>
+                <artifactId>jboss-eap-ee-with-tools</artifactId>
+                <version>${version.bom.ee}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>redhat-ga-maven-repository</id>
+            <name>Red Hat GA Maven Repository</name>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+    <repositories>
+        <repository>
+            <id>redhat-ga-maven-repository</id>
+            <name>Red Hat GA Maven Repository</name>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
+            <layout>default</layout>
+        </repository>
+    </repositories>
+
     <dependencies>
-<!--        <dependency>-->
-<!--            <groupId>jakarta.enterprise</groupId>-->
-<!--            <artifactId>jakarta.enterprise.cdi-api</artifactId>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>jakarta.ws.rs</groupId>-->
-<!--            <artifactId>jakarta.ws.rs-api</artifactId>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>jakarta.servlet</groupId>-->
-<!--            <artifactId>jakarta.servlet-api</artifactId>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>10.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JUnit -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -58,135 +187,71 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.microprofile.health</groupId>
-            <artifactId>microprofile-health-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.microprofile.metrics</groupId>
-            <artifactId>microprofile-metrics-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.microprofile.config</groupId>
-            <artifactId>microprofile-config-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.eclipse.microprofile.config</groupId>
-            <artifactId>microprofile-config-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- Add the {JAX-RS} API. Set provided for the <scope> tag, as the API is included in the server. -->
-        <dependency>
-            <groupId>org.jboss.spec.javax.ws.rs</groupId>
-            <artifactId>jboss-jaxrs-api_2.1_spec</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- Add the CDI API. Set provided for the <scope> tag, as the API is included in the server. -->
-        <dependency>
-            <groupId>org.jboss.spec</groupId>
-            <artifactId>jboss-jakartaee-8.0</artifactId>
-            <version>1.0.1.Final</version>
-            <type>pom</type>
-            <scope>provided</scope>
-        </dependency>
-        <!-- Import the CDI API, we use provided scope as the API is included in the server -->
-<!--        <dependency>-->
-<!--            <groupId>jakarta.enterprise</groupId>-->
-<!--            <artifactId>jakarta.enterprise.cdi-api</artifactId>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-        <!-- JBoss EAP で Eclipse MicroProfile Health -->
-<!--        <dependency>-->
-<!--            <groupId>io.smallrye</groupId>-->
-<!--            <artifactId>smallrye-health</artifactId>-->
-<!--            <version>4.0.4</version>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.eclipse.microprofile.health</groupId>-->
-<!--            <artifactId>microprofile-health-api</artifactId>-->
-<!--            <version>1.0</version>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-        <!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.7.3</version>
-        </dependency>
-
     </dependencies>
 
     <build>
-<!--        <finalName>${project.artifactId}</finalName>-->
         <plugins>
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${version.plugin.wildfly}</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>${version.plugin.war}</version>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>org.wildfly.plugins</groupId>-->
-<!--                <artifactId>wildfly-maven-plugin</artifactId>-->
-<!--            </plugin>-->
+            <plugin>
+                <groupId>org.jboss.eap.plugins</groupId>
+                <artifactId>eap-maven-plugin</artifactId>
+                <version>1.0.1.Final-redhat-00003</version>
+                <configuration>
+                    <channels>
+                        <channel>
+                            <manifest>
+                                <groupId>org.jboss.eap.channels</groupId>
+                                <artifactId>eap-8.0</artifactId>
+                            </manifest>
+                        </channel>
+                    </channels>
+                    <feature-packs>
+                        <feature-pack>
+                            <location>org.jboss.eap:wildfly-ee-galleon-pack</location>
+                        </feature-pack>
+                        <feature-pack>
+                            <location>org.jboss.eap.cloud:eap-cloud-galleon-pack</location>
+                        </feature-pack>
+                        <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
+                        <feature-pack>
+                            <location>org.jboss.eap:eap-datasources-galleon-pack</location>
+                        </feature-pack>
+                    </feature-packs>
+                    <layers>
+                        <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/assembly_capability-trimming-in-jboss-eap-for-openshift_default#base-layers_assembly_capability-trimming-in-jboss-eap-for-openshift -->
+                        <layer>jaxrs-server</layer>
+                        <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
+                        <layer>postgresql-datasource</layer>
+                        <!-- 環境変数に追加 POSTGRESQL_DRIVER_VERSION=42.7.3 -->
+                    </layers>
+                    <!-- https://github.com/jbossas/eap-maven-plugin/blob/main/doc/package.md#fine-tune-server-configuration-and-package-extra-content -->
+                    <packaging-scripts>
+                        <packaging-script>
+                            <scripts>
+                                <script>${jboss.cli.script}</script>
+                            </scripts>
+                        </packaging-script>
+                    </packaging-scripts>
+                    <runtime-name>ROOT.war</runtime-name>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-<!--    <repositories>-->
-<!--        <repository>-->
-<!--            <id>jboss-public-maven-repository</id>-->
-<!--            <name>JBoss Public Maven Repository</name>-->
-<!--            <url>https://repository.jboss.org/nexus/content/groups/public</url>-->
-<!--            <layout>default</layout>-->
-<!--            <releases>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>never</updatePolicy>-->
-<!--            </releases>-->
-<!--            <snapshots>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>never</updatePolicy>-->
-<!--            </snapshots>-->
-<!--        </repository>-->
-<!--        <repository>-->
-<!--            <id>redhat-ga-maven-repository</id>-->
-<!--            <name>Red Hat GA Maven Repository</name>-->
-<!--            <url>https://maven.repository.redhat.com/ga/</url>-->
-<!--            <layout>default</layout>-->
-<!--            <releases>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>never</updatePolicy>-->
-<!--            </releases>-->
-<!--            <snapshots>-->
-<!--                <enabled>true</enabled>-->
-<!--                <updatePolicy>never</updatePolicy>-->
-<!--            </snapshots>-->
-<!--        </repository>-->
-<!--    </repositories>-->
-<!--    <pluginRepositories>-->
-<!--        <pluginRepository>-->
-<!--            <id>jboss-public-maven-repository</id>-->
-<!--            <name>JBoss Public Maven Repository</name>-->
-<!--            <url>https://repository.jboss.org/nexus/content/groups/public</url>-->
-<!--            <releases>-->
-<!--                <enabled>true</enabled>-->
-<!--            </releases>-->
-<!--            <snapshots>-->
-<!--                <enabled>true</enabled>-->
-<!--            </snapshots>-->
-<!--        </pluginRepository>-->
-<!--        <pluginRepository>-->
-<!--            <id>redhat-ga-maven-repository</id>-->
-<!--            <name>Red Hat GA Maven Repository</name>-->
-<!--            <url>https://maven.repository.redhat.com/ga/</url>-->
-<!--            <releases>-->
-<!--                <enabled>true</enabled>-->
-<!--            </releases>-->
-<!--            <snapshots>-->
-<!--                <enabled>true</enabled>-->
-<!--            </snapshots>-->
-<!--        </pluginRepository>-->
-<!--    </pluginRepositories>-->
+
 </project>
