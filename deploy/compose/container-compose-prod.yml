@@ -18,6 +18,10 @@ services:
       POSTGRESQL_SERVICE_HOST: rdbms
       POSTGRESQL_SERVICE_PORT: 5432
       MICROSERVICE_HOSTNAME: microservice:8080
+      SESSIONSTORE_HOST: sessionstore
+      SESSIONSTORE_PORT: 11222
+      SESSIONSTORE_USER: web-session-user
+      SESSIONSTORE_PASSWORD: password
     volumes:
       - applog:/opt/eap/standalone/log
     networks:
@@ -51,6 +55,7 @@ services:
 
   sessionstore:
     image: registry.redhat.io/datagrid/datagrid-8-rhel9:1.5-8.5.0.GA
+    # https://catalog.redhat.com/software/containers/datagrid/datagrid-8-rhel9/62a80c58e265aa868784fdc8
     ports:
       - 11222:11222
 #      - 11221:11221

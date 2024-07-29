@@ -27,70 +27,17 @@
             <id>openshift</id>
             <properties>
                 <jboss.cli.script>production.cli</jboss.cli.script>
+                <wildfly.provisioning.layers>jaxrs-server,postgresql-datasource,web-clustering</wildfly.provisioning.layers>
             </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.jboss.eap.plugins</groupId>
-                        <artifactId>eap-maven-plugin</artifactId>
-                        <version>1.0.1.Final-redhat-00003</version>
-                        <configuration>
-                            <channels>
-                                <channel>
-                                    <manifest>
-                                        <groupId>org.jboss.eap.channels</groupId>
-                                        <artifactId>eap-8.0</artifactId>
-                                    </manifest>
-                                </channel>
-                            </channels>
-                            <feature-packs>
-                                <feature-pack>
-                                    <location>org.jboss.eap:wildfly-ee-galleon-pack</location>
-                                </feature-pack>
-                                <feature-pack>
-                                    <location>org.jboss.eap.cloud:eap-cloud-galleon-pack</location>
-                                </feature-pack>
-                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
-                                <feature-pack>
-                                    <location>org.jboss.eap:eap-datasources-galleon-pack</location>
-                                </feature-pack>
-                            </feature-packs>
-                            <layers>
-                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/assembly_capability-trimming-in-jboss-eap-for-openshift_default#base-layers_assembly_capability-trimming-in-jboss-eap-for-openshift -->
-                                <layer>jaxrs-server</layer>
-                                <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
-                                <layer>postgresql-datasource</layer>
-                                <!-- 環境変数に追加 POSTGRESQL_DRIVER_VERSION=42.7.3 -->
-                                <layer>web-clustering</layer>
-                            </layers>
-                            <!-- https://github.com/jbossas/eap-maven-plugin/blob/main/doc/package.md#fine-tune-server-configuration-and-package-extra-content -->
-                            <packaging-scripts>
-                                <packaging-script>
-                                    <scripts>
-                                        <script>${jboss.cli.script}</script>
-                                    </scripts>
-                                </packaging-script>
-                            </packaging-scripts>
-                            <runtime-name>ROOT.war</runtime-name>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>package</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
+
         <profile>
             <id>develop</id>
+            <!-- In the development environment, no externalization of sessions -->
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <jboss.cli.script>production.cli</jboss.cli.script>
                 <wildfly.provisioning.layers>jaxrs-server,postgresql-datasource</wildfly.provisioning.layers>
             </properties>
             <build>
@@ -105,8 +52,8 @@
                     </plugin>
                 </plugins>
             </build>
-
         </profile>
+
         <profile>
             <id>solution</id>
             <properties>
@@ -116,6 +63,23 @@
             </properties>
         </profile>
     </profiles>
+
+    <repositories>
+        <repository>
+            <id>redhat-ga-maven-repository</id>
+            <name>Red Hat GA Maven Repository</name>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
+            <layout>default</layout>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -136,36 +100,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>redhat-ga-maven-repository</id>
-            <name>Red Hat GA Maven Repository</name>
-            <url>https://maven.repository.redhat.com/ga/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
-    <repositories>
-        <repository>
-            <id>redhat-ga-maven-repository</id>
-            <name>Red Hat GA Maven Repository</name>
-            <url>https://maven.repository.redhat.com/ga/</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </snapshots>
-            <layout>default</layout>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>jakarta.platform</groupId>
@@ -174,7 +108,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- JUnit -->
+        <!-- For test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -188,6 +122,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>redhat-ga-maven-repository</id>
+            <name>Red Hat GA Maven Repository</name>
+            <url>https://maven.repository.redhat.com/ga/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <build>
         <plugins>
@@ -205,6 +153,7 @@
                 <groupId>org.jboss.eap.plugins</groupId>
                 <artifactId>eap-maven-plugin</artifactId>
                 <version>1.0.1.Final-redhat-00003</version>
+                <!-- See https://docs.wildfly.org/wildfly-maven-plugin/releases/4.2/package-mojo.html -->
                 <configuration>
                     <channels>
                         <channel>
@@ -226,13 +175,6 @@
                             <location>org.jboss.eap:eap-datasources-galleon-pack</location>
                         </feature-pack>
                     </feature-packs>
-                    <layers>
-                        <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/assembly_capability-trimming-in-jboss-eap-for-openshift_default#base-layers_assembly_capability-trimming-in-jboss-eap-for-openshift -->
-                        <layer>jaxrs-server</layer>
-                        <!-- https://docs.redhat.com/ja/documentation/red_hat_jboss_enterprise_application_platform/8.0/html/using_jboss_eap_on_openshift_container_platform/proc_using-the-jboss-eap-maven-plugin-to-provision-eap-8-server-with-jdbc-drivers-and-data-sources_default -->
-                        <layer>postgresql-datasource</layer>
-                        <!-- 環境変数に追加 POSTGRESQL_DRIVER_VERSION=42.7.3 -->
-                    </layers>
                     <!-- https://github.com/jbossas/eap-maven-plugin/blob/main/doc/package.md#fine-tune-server-configuration-and-package-extra-content -->
                     <packaging-scripts>
                         <packaging-script>
@@ -253,5 +195,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

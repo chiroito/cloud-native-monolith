@@ -1,0 +1,165 @@
+# 事前に JBoss EAP Operator と Data Grid Operator のインストールが必要です。
+# JBoss EAP Operatorはモノリスアプリケーションをデプロイするのに使われます。
+# Data Grid OperatorはData Gridをデプロイします。
+# Data Grid はセッションストアとして使われます。
+# マイクロサービスは、KubernetesのDeploymentを使用してデプロイされます。
+# PostgreSQL はテンプレートを使ってデプロイします。
+
+
+# マイクロサービスをコンテナイメージからデプロイ。
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microservice-deployment
+  labels:
+    app: microservice
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/instance: microservice
+    app.kubernetes.io/name: microservice
+    app.kubernetes.io/part-of: sample-microservice-app
+    app.openshift.io/runtime: quarkus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: microservice
+  template:
+    metadata:
+      labels:
+        app: microservice
+        deployment: microservice-deployment
+    spec:
+      containers:
+        - name: microservice
+          image: ghcr.io/chiroito/sample-microservice:main
+          ports:
+            - containerPort: 8080
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: microservice
+  labels:
+    app: microservice
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/instance: microservice
+    app.kubernetes.io/name: microservice
+    app.kubernetes.io/part-of: sample-microservice-app
+    app.openshift.io/runtime-version: main
+spec:
+  ports:
+    - name: 8080-tcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: microservice
+
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: microservice
+  labels:
+    app: microservice
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/instance: microservice
+    app.kubernetes.io/name: microservice
+    app.kubernetes.io/part-of: sample-microservice-app
+    app.openshift.io/runtime-version: main
+spec:
+  to:
+    kind: Service
+    name: microservice
+    weight: 100
+  port:
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+
+
+
+
+---
+# Red Hat Data Gridをデプロイ。
+# 事前に Data Grid Operator を OpenShift にインストールしてください。
+
+apiVersion: infinispan.org/v1
+kind: Infinispan
+metadata:
+  name: sessionstore
+  namespace: cloud-native-monolith
+spec:
+  security:
+    endpointAuthentication: true
+    endpointEncryption:
+      clientCert: None
+      type: None
+    endpointSecretName: sessionstore-secret
+  container:
+    cpu: '1'
+    memory: 512Mi
+  replicas: 2
+
+
+
+
+---
+# モノリスのアプリケーションとJBoss EAPをデプロイします。
+# 事前に JBoss EAP Operator を OpenShift にインストールしてください。
+
+apiVersion: wildfly.org/v1alpha1
+kind: WildFlyServer
+metadata:
+  name: cloud-native-monolith
+  namespace: cloud-native-monolith
+spec:
+  env:
+    - name: POSTGRESQL_DATABASE
+      value: user
+    - name: POSTGRESQL_USER
+      value: user
+    - name: POSTGRESQL_PASSWORD
+      value: pw
+    - name: POSTGRESQL_SERVICE_HOST
+      value: rdbms
+    - name: POSTGRESQL_SERVICE_PORT
+      value: '5432'
+    - name: MICROSERVICE_HOSTNAME
+      value: 'microservice:8080'
+    - name: SESSIONSTORE_HOST
+      value: sessionstore.cloud-native-monolith.svc.cluster.local
+    - name: SESSIONSTORE_PORT
+      value: '11222'
+    - name: SESSIONSTORE_USER
+      value: web-session-user
+    - name: SESSIONSTORE_PASSWORD
+      value: password
+  replicas: 1
+  applicationImage: ghcr.io/chiroito/cloud-native-monolith:main
+#  applicationImage: image-registry.openshift-image-registry.svc:5000/cloud-native-monolith/cloud-native-monolith
+
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: route
+  namespace: cloud-native-monolith
+  labels:
+    app.kubernetes.io/name: cloud-native-monolith
+    app.openshift.io/runtime: eap
+spec:
+  to:
+    kind: Service
+    name: cloud-native-monolith-loadbalancer
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+    destinationCACertificate: ''
+  port:
+    targetPort: http
+  alternateBackends: []
