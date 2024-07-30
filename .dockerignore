@@ -9,4 +9,5 @@ out
 mvnw*
 META-INF
 README.md
-Containerfile
+Containerfile-dev
+Containerfile-solution

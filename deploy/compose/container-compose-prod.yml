@@ -9,8 +9,8 @@ services:
     restart: always
     ports:
       - 8080:8080
-      - 9990:9990
-      - 8443:8443
+#      - 9990:9990
+#      - 8443:8443
     environment:
       POSTGRESQL_DATABASE: user
       POSTGRESQL_USER: user

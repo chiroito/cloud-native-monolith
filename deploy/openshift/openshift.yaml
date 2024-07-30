@@ -140,8 +140,7 @@ spec:
     - name: SESSIONSTORE_PASSWORD
       value: password
   replicas: 1
-  applicationImage: ghcr.io/chiroito/cloud-native-monolith:main
-#  applicationImage: image-registry.openshift-image-registry.svc:5000/cloud-native-monolith/cloud-native-monolith
+  applicationImage: image-registry.openshift-image-registry.svc:5000/cloud-native-monolith/cloud-native-monolith
 
 ---
 kind: Route
